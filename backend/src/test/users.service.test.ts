@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { NotFoundError } from '../errors.js';
-import { UsersService } from './users.service.js';
+import { NotFoundError } from '../app/errors.js';
+import { UsersService } from '../app/services/users.service.js';
 
 const user = { id: '9c4b9a62-7c4e-4ee9-88af-6f4c07637965', email: 'ada@example.com', name: 'Ada', createdAt: new Date(), updatedAt: new Date() };
 

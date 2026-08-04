@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseEnvironment } from './env.js';
+import { parseEnvironment } from '../app/config/env.js';
 
 const validEnvironment = {
   DATABASE_URL: 'postgresql://user:password@localhost:5432/tap',

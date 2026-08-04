@@ -1,9 +1,9 @@
-import { createApp } from './app.js';
-import { parseEnvironment } from './config/env.js';
-import { createOpenSearchClient } from './lib/opensearch.js';
-import { prisma } from './lib/prisma.js';
-import { createRedisClient } from './lib/redis.js';
-import { UsersService } from './services/users.service.js';
+import { createApp } from './app/app.js';
+import { parseEnvironment } from './app/config/env.js';
+import { createOpenSearchClient } from './app/lib/opensearch.js';
+import { prisma } from './app/lib/prisma.js';
+import { createRedisClient } from './app/lib/redis.js';
+import { UsersService } from './app/services/users.service.js';
 
 const environment = parseEnvironment();
 const redis = createRedisClient(environment.REDIS_URL);

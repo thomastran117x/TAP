@@ -1,8 +1,8 @@
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from './app.js';
-import type { Environment } from './config/env.js';
-import { UsersService } from './services/users.service.js';
+import { createApp } from '../app/app.js';
+import type { Environment } from '../app/config/env.js';
+import { UsersService } from '../app/services/users.service.js';
 
 const environment: Environment = {
   PORT: 3000, NODE_ENV: 'test', CORS_ORIGIN: 'http://localhost:4200',
