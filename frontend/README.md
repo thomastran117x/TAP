@@ -44,6 +44,27 @@ To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use th
 ng test
 ```
 
+## Formatting and CI
+
+Use the repository's Prettier configuration to format frontend source and configuration:
+
+```sh
+npm run format
+npm run format:check
+```
+
+Generated output, dependencies, and `package-lock.json` are excluded through `.prettierignore`.
+The GitHub Actions workflow in `../.github/workflows/ci.yml` runs formatting checks,
+the production build, and unit tests on pushes and pull requests, and can be started manually.
+It uses Node 24 and npm 11.16.0. To run the same checks locally:
+
+```sh
+npm ci
+npm run format:check
+npm run build
+npm test -- --watch=false
+```
+
 ## Running end-to-end tests
 
 For end-to-end (e2e) testing, run:

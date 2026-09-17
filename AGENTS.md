@@ -35,6 +35,7 @@ frontend/
 compose.yml               Base stack; backend uses the prod profile
 compose.dev.yml           Development override; backend uses the dev profile
 .env.example              Optional Compose credentials and published port settings
+.github/workflows/ci.yml   Frontend and backend formatting, build, quality, tests
 ```
 
 ## Backend boundaries
@@ -150,9 +151,21 @@ From `frontend`, use the package manager declared in `package.json`:
 
 ```sh
 npm ci
+npm run format:check
 npm run build
 npm test -- --watch=false
 ```
+
+Use `npm run format` to fix frontend formatting. `.prettierignore` excludes
+generated output and the npm lockfile; `.gitattributes` keeps text line endings
+consistent across platforms. CI uses Node 24 and the npm version declared in
+`frontend/package.json`; keep the workflow's npm version in sync with that field.
+
+`.github/workflows/ci.yml` runs on pushes, pull requests, and manual dispatch.
+Frontend and backend checks run independently. Backend quality checks include
+Clippy with warnings treated as errors; CI tests do not start external services
+or run the ignored live health test. The backend job also validates both Compose
+configurations. Keep the CI Rust version aligned with the backend Dockerfile.
 
 For Compose edits, from the repository root:
 

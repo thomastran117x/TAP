@@ -1,0 +1,8 @@
+node_modules/
+.angular/
+dist/
+out-tsc/
+coverage/
+tmp/
+bazel-out/
+package-lock.json
