@@ -21,13 +21,8 @@ services:
     build:
       context: ./backend
     environment:
-      PORT: 3000
-      NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-tap}:${POSTGRES_PASSWORD:-tap}@postgres:5432/${POSTGRES_DB:-tap}?schema=public
-      REDIS_URL: redis://redis:6379
-      OPENSEARCH_NODE: http://opensearch:9200
-      OPENSEARCH_USERNAME: admin
-      OPENSEARCH_PASSWORD: ${OPENSEARCH_PASSWORD:-Admin123!Admin123!}
+      APP_ENV: prod
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tap}:${POSTGRES_PASSWORD:-tap}@postgres:5432/${POSTGRES_DB:-tap}
       CORS_ORIGIN: http://localhost:${FRONTEND_PORT:-4000}
     ports:
       - "${BACKEND_PORT:-3000}:3000"
@@ -39,7 +34,7 @@ services:
       opensearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "4", "http://localhost:3000/ready"]
       interval: 10s
       timeout: 5s
       retries: 10

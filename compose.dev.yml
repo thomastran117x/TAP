@@ -18,17 +18,21 @@ services:
 
   backend:
     build:
-      target: dependencies
-    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run dev"
+      target: development
+    command: cargo run --locked
     environment:
-      NODE_ENV: development
+      APP_ENV: dev
+      REDIS_URL: redis://redis:6379
+      OPENSEARCH_NODE: http://opensearch:9200
       CORS_ORIGIN: http://localhost:4200
     volumes:
       - ./backend:/app
-      - backend-node-modules:/app/node_modules
+      - backend-cargo-registry:/usr/local/cargo/registry
+      - backend-target:/app/target
     healthcheck:
       disable: true
 
 volumes:
   frontend-node-modules:
-  backend-node-modules:
+  backend-cargo-registry:
+  backend-target:

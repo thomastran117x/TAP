@@ -1,23 +1,27 @@
-FROM node:24-alpine AS dependencies
+FROM rust:1.92-bookworm AS development
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-
-FROM dependencies AS build
-COPY prisma ./prisma
-RUN npx prisma generate
-COPY tsconfig.json ./
+COPY Cargo.toml Cargo.lock ./
+COPY config ./config
 COPY src ./src
-RUN npm run build
-
-FROM node:24-alpine AS production
-WORKDIR /app
-ENV NODE_ENV=production
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=build /app/dist ./dist
-COPY prisma ./prisma
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+CMD ["cargo", "run", "--locked"]
+
+FROM development AS build
+RUN cargo build --release --locked
+
+FROM build AS validation
+COPY tests ./tests
+RUN rustup component add rustfmt clippy
+RUN cargo fmt --check
+RUN cargo clippy --release --locked --all-targets -- -D warnings
+RUN cargo test --release --locked
+
+FROM debian:bookworm-slim AS production
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --uid 10001 --create-home app
+WORKDIR /app
+COPY --from=build /app/target/release/tap-backend /usr/local/bin/tap-backend
+USER app
+EXPOSE 3000
+CMD ["tap-backend"]

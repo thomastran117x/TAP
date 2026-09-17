@@ -1,0 +1,21 @@
+[package]
+name = "tap-backend"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+
+[dependencies]
+anyhow = "1"
+axum = "0.8"
+opensearch = { version = "2", default-features = false, features = ["rustls-tls"] }
+redis = { version = "1", features = ["tokio-comp", "connection-manager"] }
+serde = { version = "1", features = ["derive"] }
+serde_yaml_ng = "0.10"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "time"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

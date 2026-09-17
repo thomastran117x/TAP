@@ -1,0 +1,18 @@
+server:
+  host: 0.0.0.0
+  port: 3000
+  cors_origin: http://localhost:4000
+database:
+  # Supply DATABASE_URL through the deployment environment.
+  url: null
+  max_connections: 10
+redis:
+  url: redis://redis:6379
+opensearch:
+  node: http://opensearch:9200
+  username: null
+  password: null
+health:
+  timeout_ms: 3000
+logging:
+  filter: tap_backend=info,tower_http=info

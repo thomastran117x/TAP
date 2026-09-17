@@ -1,0 +1,17 @@
+server:
+  host: 127.0.0.1
+  port: 3001
+  cors_origin: http://localhost:4200
+database:
+  url: postgresql://tap:tap@localhost:5432/tap_test
+  max_connections: 2
+redis:
+  url: redis://localhost:6379/1
+opensearch:
+  node: http://localhost:9200
+  username: null
+  password: null
+health:
+  timeout_ms: 3000
+logging:
+  filter: tap_backend=warn,tower_http=warn
