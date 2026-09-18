@@ -2,6 +2,7 @@ FROM rust:1.92-bookworm AS development
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY config ./config
+COPY openapi.yaml ./openapi.yaml
 COPY src ./src
 EXPOSE 3000
 CMD ["cargo", "run", "--locked"]

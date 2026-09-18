@@ -19,13 +19,15 @@ remain in this file.
 backend/
   Cargo.toml, Cargo.lock   Rust dependencies; Rust 1.92+, edition 2024
   config/                 dev.yml, test.yml, prod.yml application defaults
+  openapi.yaml            Checked-in OpenAPI 3.1.1 contract served by the API
+  redocly.yaml            Specification and example validation rules
   src/
     main.rs               Thin executable entry point
     lib.rs                Library entry point for the server and tests
     app/                  Configuration, router assembly, state, server lifecycle
     infra/                Postgres, Redis, OpenSearch clients and logging setup
     middleware/           Shared HTTP layers: errors, CORS, and request tracing
-    features/             Capability-based modules; health is the first feature
+    features/             Capability modules: health and OpenAPI documentation
   tests/                  Public API checks and live integration tests
     support/              Shared test helpers
   Dockerfile              Development, build, validation, production stages
@@ -75,6 +77,12 @@ compose.test.yml          Standalone isolated integration stack and test runner
   HTTP responses or logs. Avoid `unwrap`/`expect` in recoverable request paths.
 - Make database schema changes through versioned migrations and document their
   application steps. Do not assume a migration runner already exists.
+- Keep `backend/openapi.yaml` aligned with routes, HTTP models, statuses, and
+  public error codes. This is a manually maintained contract embedded in the
+  binary and served at `GET /openapi.yaml`. Update operation IDs, schemas, and
+  examples when changing API behavior; do not document unimplemented features.
+  Validate it with the pinned Redocly command in `docs/testing.md` and preserve
+  integration checks that compare response examples with actual API responses.
 
 ## Rust coding practices
 
@@ -272,6 +280,15 @@ Clippy with warnings treated as errors; ordinary backend tests skip live checks.
 A separate integration job runs `compose.test.yml` with real services and always
 cleans up its stack. The backend job validates all three Compose configurations.
 Keep the CI Rust version aligned with the backend Dockerfile.
+
+The OpenAPI job validates the spec, references, and response examples using
+Redocly CLI 2.45.0 on Node 24. From the repository root:
+
+```sh
+npx --yes @redocly/cli@2.45.0 lint --config backend/redocly.yaml backend/openapi.yaml
+```
+
+Keep the validator version aligned between CI and documentation.
 
 For Compose edits, from the repository root:
 

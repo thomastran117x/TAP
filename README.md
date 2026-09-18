@@ -19,7 +19,8 @@ docker compose up --build
 
 Open the frontend at **http://localhost:4000**. The API runs at
 **http://localhost:3000**; visit `/health` for liveness and `/ready` for dependency
-status. The first build downloads dependencies and can take several minutes.
+status. Download the OpenAPI contract at `/openapi.yaml`. The first build downloads
+dependencies and can take several minutes.
 
 No `.env` file is required. Defaults work for the local Compose stack. The
 optional [.env.example](.env.example) lists credentials and published ports you
@@ -109,6 +110,8 @@ Start at the [documentation index](docs/README.md). The
 [configuration guide](docs/configuration.md) explains YAML profiles and
 environment overrides; the [API reference](docs/api.md) documents endpoints
 and the shared JSON error contract.
+The machine-readable contract is [backend/openapi.yaml](backend/openapi.yaml),
+also served by the API and validated in CI.
 
 Follow [CONTRIBUTING.md](CONTRIBUTING.md) when making changes. AI coding agents
 should also read [AGENTS.md](AGENTS.md); [CLAUDE.md](CLAUDE.md) points to the same

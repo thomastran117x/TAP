@@ -3,9 +3,24 @@
 [Documentation index](README.md)
 
 The default local API base URL is `http://localhost:3000`. The implemented
-endpoints are health and readiness. HTTP error constructors are shared building
+endpoints are health, readiness, and OpenAPI documentation. HTTP error
+constructors are shared building
 blocks; authentication, authorization, and rate limiting have not yet been
 implemented as application features.
+
+## OpenAPI contract
+
+Download the OpenAPI 3.1.1 document from `GET /openapi.yaml`, normally at
+`http://localhost:3000/openapi.yaml`. It returns status **200** with
+`Content-Type: application/yaml` and the exact checked-in
+[backend/openapi.yaml](../backend/openapi.yaml) embedded in the binary.
+The relative server URL `/` follows the host serving the document.
+
+Import the file or endpoint into OpenAPI-compatible documentation and client
+tools. Keep the contract's paths, operation IDs, schemas, examples, and error
+codes aligned when adding or changing endpoints. See [testing](testing.md#openapi-validation)
+for the validation command. Editing the contract requires rebuilding the server,
+or restarting mounted-source development to recompile.
 
 ## Liveness
 

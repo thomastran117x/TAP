@@ -21,3 +21,7 @@ See [contributing](../CONTRIBUTING.md) for change and review expectations, and
 
 These documents describe the checked-in implementation. Update the relevant
 guide when changing a command, setting, endpoint, or architectural boundary.
+
+The [OpenAPI contract](../backend/openapi.yaml) is served at `/openapi.yaml` by
+the backend. See the [HTTP API guide](api.md#openapi-contract) for usage and
+maintenance.

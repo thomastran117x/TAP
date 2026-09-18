@@ -43,6 +43,9 @@ as well as successes. See the [API reference](api.md) for the response contract.
 
 The health feature is the first implemented capability. `/health` checks
 liveness; `/ready` checks all three dependencies concurrently with deadlines.
+The OpenAPI feature serves the embedded `backend/openapi.yaml` contract at
+`/openapi.yaml` without querying dependencies. The contract is maintained alongside
+handlers, validated in CI, and included in the Docker build.
 
 ## Add a feature
 
@@ -57,7 +60,9 @@ liveness; `/ready` checks all three dependencies concurrently with deadlines.
    stack and state.
 5. Map expected domain failures to shared HTTP errors. Add context to unexpected
    errors, and keep internal sources out of client messages and details.
-6. Add deterministic contract tests and live tests for meaningful persistence
+6. Update `backend/openapi.yaml` with paths, operation IDs, responses, schemas,
+   and examples, and run the specification validator.
+7. Add deterministic contract tests and live tests for meaningful persistence
    behavior. Update configuration and API documentation when contracts change.
 
 Use versioned migrations for schema changes. A migration runner has not been

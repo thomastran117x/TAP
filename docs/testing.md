@@ -98,16 +98,30 @@ names. Keep new tests safe for parallel execution: use transactions or temporary
 tables, expiring Redis keys, unique search indexes, and cleanup on failure.
 Never flush shared databases or delete shared resources.
 
+## OpenAPI validation
+
+From the repository root, using Node 24:
+
+```sh
+npx --yes @redocly/cli@2.45.0 lint --config backend/redocly.yaml backend/openapi.yaml
+```
+
+This checks the OpenAPI specification, references, unique operation IDs, and
+schema/example compatibility using the checked-in Redocly rules. The YAML is
+maintained alongside handlers. Rust tests verify the served document; live
+integration tests compare health/readiness responses with documented examples.
+
 ## CI
 
 [The workflow](../.github/workflows/ci.yml) runs on pushes, pull requests, and
 manual dispatch, with independent jobs:
 
-| Job                 | Checks                                                                      |
-| ------------------- | --------------------------------------------------------------------------- |
-| Frontend            | Prettier, production build, non-watch unit tests                            |
-| Backend             | rustfmt, build, Clippy, regular tests, all Compose configurations           |
-| Backend integration | Same isolated Compose suite, logs on failure, cleanup on success or failure |
+| Job                 | Checks                                                                       |
+| ------------------- | ---------------------------------------------------------------------------- |
+| Frontend            | Prettier, production build, non-watch unit tests                             |
+| Backend             | rustfmt, build, Clippy, regular tests, all Compose configurations            |
+| OpenAPI contract    | Specification, references, unique operation IDs, response example validation |
+| Backend integration | Same isolated Compose suite, logs on failure, cleanup on success or failure  |
 
 The integration job sets the Linux OpenSearch `vm.max_map_count` requirement.
 Check job output and service logs when troubleshooting a failure.

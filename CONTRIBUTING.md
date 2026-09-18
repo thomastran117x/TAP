@@ -13,8 +13,10 @@ error, async, and persistence practices in `AGENTS.md`.
 
 When adding configuration, update the typed schema, relevant YAML profiles,
 environment override mapping, validation, tests, and reference docs together.
-When changing HTTP behavior, update the [API reference](docs/api.md) and relevant
-contract tests. Include versioned migrations and application instructions when
+When changing HTTP behavior, update [backend/openapi.yaml](backend/openapi.yaml),
+the [API reference](docs/api.md), and relevant contract tests. Run
+[OpenAPI validation](docs/testing.md#openapi-validation) and keep examples aligned
+with actual responses. Include versioned migrations and application instructions when
 introducing schema changes; a migration runner is not currently provided.
 
 Keep browser-only code safe for SSR. Use typed Angular services for API access

@@ -14,6 +14,8 @@ and the [HTTP API reference](../docs/api.md).
 
 ```text
 backend/
+  openapi.yaml              # OpenAPI 3.1.1 contract embedded in the server
+  redocly.yaml              # Specification and response example lint rules
   config/
     dev.yml                 # Local development defaults
     test.yml                # Test defaults
@@ -40,6 +42,7 @@ backend/
       errors.rs             # Normalize framework and unformatted HTTP errors
     features/
       mod.rs
+      openapi/mod.rs         # GET /openapi.yaml without dependency queries
       health/
         mod.rs              # Feature route registration
         handlers.rs         # HTTP inputs, outputs, and status codes
@@ -48,6 +51,7 @@ backend/
   tests/
     config.rs               # Configuration checks without process env mutation
     errors.rs               # Error contracts, extractor rejections, and headers
+    openapi.rs              # Served contract, content type, HEAD/method behavior
     middleware.rs           # HTTP middleware behavior without external services
     integration.rs          # Opt-in live integration test target
     integration/
@@ -180,6 +184,7 @@ cargo run --locked
 
 ## Health and validation
 
+- `GET /openapi.yaml`: OpenAPI 3.1.1 YAML contract, served as `application/yaml`.
 - `GET /health`: liveness, returns `200 {"status":"ok"}`.
 - `GET /ready`: runs Postgres `SELECT 1`, Redis `PING`, and OpenSearch `HEAD /`
   concurrently with the configured timeout (three seconds by default). Returns 200 when all succeed, or 503
@@ -205,6 +210,30 @@ docker build --target validation -t tap-backend-validation ./backend
 ```
 
 Run this command from the repository root.
+
+## OpenAPI
+
+The API serves the checked-in [openapi.yaml](openapi.yaml) at
+`http://localhost:3000/openapi.yaml`. The contract documents health/readiness,
+the documentation endpoint, and shared HTTP error schemas and examples.
+The relative server URL uses the host serving the document.
+
+The YAML is embedded at compile time and needs no runtime file in the production
+image. Rebuild after changing it, or restart the mounted-source backend to
+recompile. The Dockerfile includes the source contract during the build.
+
+Keep routes, response models, error codes, and this contract synchronized.
+The file is maintained explicitly; Rust handlers do not generate it. From the
+repository root, using Node 24:
+
+```sh
+npx --yes @redocly/cli@2.45.0 lint --config backend/redocly.yaml backend/openapi.yaml
+```
+
+CI runs the same specification and example checks. Regular Rust tests verify
+the endpoint and embedded document; live integration tests compare health and
+readiness responses with the documented examples and exercise the assembled
+documentation route. See the [HTTP API reference](../docs/api.md).
 
 ## Integration tests
 

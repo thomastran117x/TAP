@@ -77,6 +77,21 @@ jobs:
           docker compose -f compose.yml -f compose.dev.yml config --quiet
           docker compose -f compose.test.yml config --quiet
 
+  openapi:
+    name: OpenAPI contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Validate specification and response examples
+        working-directory: backend
+        run: npx --yes @redocly/cli@2.45.0 lint --config redocly.yaml openapi.yaml
+
   integration:
     name: Backend integration
     runs-on: ubuntu-latest

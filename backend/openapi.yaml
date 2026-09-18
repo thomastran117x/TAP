@@ -1,0 +1,192 @@
+openapi: 3.1.1
+info:
+  title: TAP backend API
+  version: 0.1.0
+  description: >-
+    Health, readiness, and API documentation for the TAP backend.
+    Errors use a shared JSON envelope with a stable code, readable message,
+    and optional public details. Authentication and rate limiting are not
+    implemented yet.
+servers:
+  - url: /
+    description: The server hosting this document
+security: []
+tags:
+  - name: Health
+    description: Application liveness and dependency readiness
+  - name: Documentation
+    description: Machine-readable API contract
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [Health]
+      summary: Check application liveness
+      description: Returns successfully without querying external dependencies.
+      responses:
+        '200':
+          description: The application can respond.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+        default:
+          $ref: '#/components/responses/HttpError'
+  /ready:
+    get:
+      operationId: getReadiness
+      tags: [Health]
+      summary: Check dependency readiness
+      description: >-
+        Checks Postgres, Redis, and OpenSearch concurrently with the configured
+        dependency timeout. Returns 503 when any check fails or times out.
+      responses:
+        '200':
+          description: All dependencies are available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+              example:
+                status: ready
+                postgres: true
+                redis: true
+                opensearch: true
+        '503':
+          description: At least one dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessErrorResponse'
+              example:
+                error:
+                  code: service_unavailable
+                  message: The service is temporarily unavailable. Please try again later.
+                  details:
+                    postgres: false
+                    redis: true
+                    opensearch: true
+        default:
+          $ref: '#/components/responses/HttpError'
+  /openapi.yaml:
+    get:
+      operationId: getOpenApi
+      tags: [Documentation]
+      summary: Download this OpenAPI document
+      description: Returns the YAML contract embedded in the application binary.
+      responses:
+        '200':
+          description: The OpenAPI 3.1.1 document in YAML format.
+          content:
+            application/yaml:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/HttpError'
+components:
+  responses:
+    HttpError:
+      description: >-
+        An HTTP failure. The response status conveys the failure category.
+        Internal sources are never included in the public message or details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: internal_error
+              message: An unexpected error occurred. Please try again later.
+  schemas:
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+    DependencyStatus:
+      type: object
+      additionalProperties: false
+      required: [postgres, redis, opensearch]
+      properties:
+        postgres:
+          type: boolean
+        redis:
+          type: boolean
+        opensearch:
+          type: boolean
+    Readiness:
+      type: object
+      additionalProperties: false
+      required: [status, postgres, redis, opensearch]
+      properties:
+        status:
+          type: string
+          const: ready
+        postgres:
+          type: boolean
+          const: true
+        redis:
+          type: boolean
+          const: true
+        opensearch:
+          type: boolean
+          const: true
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+    ErrorBody:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Stable identifier for client logic.
+          enum:
+            - bad_request
+            - unauthorized
+            - forbidden
+            - not_found
+            - method_not_allowed
+            - request_timeout
+            - conflict
+            - payload_too_large
+            - unsupported_media_type
+            - validation_error
+            - too_many_requests
+            - internal_error
+            - bad_gateway
+            - service_unavailable
+            - gateway_timeout
+            - request_error
+        message:
+          type: string
+          description: Readable client-safe explanation; do not use for branching.
+        details:
+          description: Optional public JSON metadata; omitted when absent.
+    ReadinessErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, details]
+          properties:
+            code:
+              type: string
+              const: service_unavailable
+            message:
+              type: string
+            details:
+              $ref: '#/components/schemas/DependencyStatus'
