@@ -18,7 +18,7 @@ backend/
     lib.rs                Library entry point for the server and tests
     app/                  Configuration, router assembly, state, server lifecycle
     infra/                Postgres, Redis, OpenSearch clients and logging setup
-    middleware/           Shared HTTP layers: CORS and request tracing
+    middleware/           Shared HTTP layers: errors, CORS, and request tracing
     features/             Capability-based modules; health is the first feature
   tests/                  Public API checks and live integration tests
     support/              Shared test helpers
@@ -56,7 +56,14 @@ compose.dev.yml           Development override; backend uses the dev profile
   `AppState`. Avoid opening new clients for every request.
 - Use asynchronous I/O on Tokio. Move blocking work off the runtime threads.
   Bind SQL parameters rather than interpolating user input into queries.
-- Return intentional error responses and attach context to internal errors.
+- Return `app::HttpResult<T>` from fallible handlers and use `app::HttpError`
+  for the shared `{ "error": { "code", "message", "details"? } }` contract.
+  Map expected domain failures to appropriate statuses within the feature;
+  propagate unexpected `anyhow` errors with `?` or `HttpError::internal`.
+  Explicit messages and details are public: never put raw dependency failures or
+  sensitive input in them. The middleware normalizes framework rejections and
+  unformatted error responses; use typed errors to retain intentional messages.
+  Attach context to internal errors.
   Use `tracing` for diagnostics; avoid exposing credentials or internal errors in
   HTTP responses or logs. Avoid `unwrap`/`expect` in recoverable request paths.
 - Make database schema changes through versioned migrations and document their

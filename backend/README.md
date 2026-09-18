@@ -20,6 +20,7 @@ backend/
     app/
       mod.rs
       config.rs             # YAML configuration, environment overrides, validation
+      error.rs              # Shared HTTP errors and JSON response contract
       router.rs             # Combine feature routes and apply middleware
       server.rs             # Startup, listener, shutdown, and cleanup
       state.rs              # Assemble shared infrastructure clients
@@ -32,6 +33,7 @@ backend/
     middleware/
       mod.rs                # Shared HTTP layer stack, including request tracing
       cors.rs               # Frontend origin policy
+      errors.rs             # Normalize framework and unformatted HTTP errors
     features/
       mod.rs
       health/
@@ -41,12 +43,14 @@ backend/
         service.rs          # Readiness logic and dependency orchestration
   tests/
     config.rs               # Configuration checks without process env mutation
+    errors.rs               # Error contracts, extractor rejections, and headers
     middleware.rs           # HTTP middleware behavior without external services
     health.rs               # Live service and route integration test
     support/mod.rs          # Shared request helpers
 ```
 
-`app` is the composition root: it wires infrastructure, features, and middleware.
+`app` wires infrastructure, features, and middleware and owns the shared HTTP
+error contract.
 `infra` owns external client setup and operations and does not depend on the app
 or HTTP handlers. `middleware` applies shared HTTP policies without depending on
 any feature or client. Features own their routes, contracts, and application
@@ -170,7 +174,9 @@ cargo run --locked
 - `GET /health`: liveness, returns `200 {"status":"ok"}`.
 - `GET /ready`: runs Postgres `SELECT 1`, Redis `PING`, and OpenSearch `HEAD /`
   concurrently with the configured timeout (three seconds by default). Returns 200 when all succeed, or 503
-  when any fail, with a boolean for each service. Compose uses this endpoint.
+  when any fail. Successful responses contain a boolean for each service;
+  failures use the shared error envelope with those booleans in `error.details`.
+  Compose uses this endpoint.
 
 ```sh
 cargo fmt --check
@@ -190,3 +196,44 @@ docker build --target validation -t tap-backend-validation ./backend
 ```
 
 Run this command from the repository root.
+
+## HTTP errors
+
+Fallible handlers return `app::HttpResult<T>` and use `app::HttpError` for
+expected failures. Rust propagates errors with `Result` and `?`. For example:
+
+```rust
+use tap_backend::app::{HttpError, HttpResult};
+
+async fn handler() -> HttpResult<()> {
+    Err(HttpError::not_found("Account was not found."))
+}
+```
+
+The response has status 404 and this JSON body:
+
+```json
+{"error":{"code":"not_found","message":"Account was not found."}}
+```
+
+Constructors cover bad requests (400), authentication (401), permission (403),
+missing resources (404), unsupported methods (405), request timeouts (408),
+conflicts (409), oversized bodies (413), unsupported content types (415),
+validation (422), rate limits (429), internal failures (500), and upstream
+failures (502/503/504). Codes are stable snake_case identifiers; validation uses
+`validation_error` and unexpected failures use `internal_error`.
+
+Use `.with_details(serde_json::json!({...}))` for optional public metadata such
+as field validation failures. Explicit messages and details are visible to
+clients and must contain only safe information. Map known domain failures to
+appropriate errors in the feature. Convert unexpected dependency failures with
+`HttpError::internal(source)`; `anyhow::Error` also converts through `?`. These
+sources are logged for diagnostics and excluded from responses. Internal errors
+always return a generic readable message.
+
+The error middleware normalizes unformatted 4xx/5xx responses, including Axum
+route, method, and extractor rejections, to the same JSON envelope. It preserves
+HTTP status and protocol headers such as `Allow`, `WWW-Authenticate`, and
+`Retry-After`, keeps HEAD bodies empty, and leaves successful responses intact.
+Typed errors preserve their public messages and details. CORS and tracing wrap
+this layer so error responses receive the same policies as successful requests.

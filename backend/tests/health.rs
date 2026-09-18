@@ -26,9 +26,13 @@ async fn live_services_and_routes() {
     state.postgres.close().await;
     let (status, _, body) = support::request(app.clone(), "/ready", origin).await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    let error: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(error["error"]["code"], "service_unavailable");
     assert_eq!(
-        body,
-        r#"{"status":"unavailable","postgres":false,"redis":true,"opensearch":true}"#
+        error["error"]["details"],
+        serde_json::json!({
+            "postgres": false, "redis": true, "opensearch": true,
+        })
     );
     let (status, _, body) = support::request(app, "/health", origin).await;
     assert_eq!(status, StatusCode::OK);

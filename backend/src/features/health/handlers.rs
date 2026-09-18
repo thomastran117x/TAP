@@ -1,21 +1,26 @@
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::State};
 
 use super::{
     models::{Health, Readiness},
     service,
 };
-use crate::app::AppState;
+use crate::app::{AppState, HttpError, HttpResult};
 
 pub(super) async fn health() -> Json<Health> {
     Json(Health { status: "ok" })
 }
 
-pub(super) async fn ready(State(state): State<AppState>) -> (StatusCode, Json<Readiness>) {
+pub(super) async fn ready(State(state): State<AppState>) -> HttpResult<Json<Readiness>> {
     let readiness = service::readiness(&state).await;
-    let status = if readiness.postgres && readiness.redis && readiness.opensearch {
-        StatusCode::OK
+    if readiness.postgres && readiness.redis && readiness.opensearch {
+        Ok(Json(readiness))
     } else {
-        StatusCode::SERVICE_UNAVAILABLE
-    };
-    (status, Json(readiness))
+        Err(
+            HttpError::service_unavailable().with_details(serde_json::json!({
+                "postgres": readiness.postgres,
+                "redis": readiness.redis,
+                "opensearch": readiness.opensearch,
+            })),
+        )
+    }
 }
