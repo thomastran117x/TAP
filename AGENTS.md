@@ -9,6 +9,12 @@ current when architecture, configuration, or development commands change.
 TAP has a Rust API and an Angular frontend with server-side rendering. Docker
 Compose supplies Postgres, Redis, and OpenSearch.
 
+Start with [README.md](README.md) for onboarding and [docs/README.md](docs/README.md)
+for architecture, development, configuration, testing, API, and troubleshooting
+guides. [CONTRIBUTING.md](CONTRIBUTING.md) describes change and review expectations.
+Keep these documents consistent with the implementation; shared coding rules
+remain in this file.
+
 ```text
 backend/
   Cargo.toml, Cargo.lock   Rust dependencies; Rust 1.92+, edition 2024

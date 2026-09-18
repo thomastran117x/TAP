@@ -6,6 +6,10 @@ client. Startup checks all three services and fails with a contextual error if a
 connection cannot be established. Requests are traced, CORS allows the configured
 frontend origin, and Ctrl+C/SIGTERM shuts down the server gracefully.
 
+See the [repository README](../README.md) for the full stack and
+[documentation index](../docs/README.md) for development, architecture, testing,
+and the [HTTP API reference](../docs/api.md).
+
 ## Structure
 
 ```text

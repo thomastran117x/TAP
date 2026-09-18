@@ -1,80 +1,87 @@
-# Frontend
+# TAP frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.2.
+Angular 22 application with standalone components, Tailwind styling, and
+server-side rendering through Express. Use Node 24 and npm 11.16.0 to match CI.
+The npm version is declared in [package.json](package.json).
 
-## Development server
+See the [repository README](../README.md) for the full stack and the
+[documentation index](../docs/README.md) for architecture, configuration, and
+testing guides.
 
-To start a local development server, run:
+## Host development
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Formatting and CI
-
-Use the repository's Prettier configuration to format frontend source and configuration:
-
-```sh
-npm run format
-npm run format:check
-```
-
-Generated output, dependencies, and `package-lock.json` are excluded through `.prettierignore`.
-The GitHub Actions workflow in `../.github/workflows/ci.yml` runs formatting checks,
-the production build, and unit tests on pushes and pull requests, and can be started manually.
-It uses Node 24 and npm 11.16.0. To run the same checks locally:
+Run from `frontend`:
 
 ```sh
 npm ci
+npm start
+```
+
+Visit `http://localhost:4200`. Angular reloads source changes. Run the backend
+separately using the [development guide](../docs/development.md); its default
+host dev profile allows this frontend origin.
+
+## Docker development
+
+From the repository root:
+
+```sh
+docker compose -f compose.yml -f compose.dev.yml up --build
+```
+
+This starts the Angular development server at `http://localhost:4200` alongside
+the Rust API and dependencies. Source is mounted; npm packages are stored in a
+named volume. See the development guide for dependency updates and shutdown.
+
+The base command `docker compose up --build` instead runs the built SSR frontend
+at `http://localhost:4000`.
+
+## Structure
+
+| Path                 | Purpose                                                  |
+| -------------------- | -------------------------------------------------------- |
+| `src/app/`           | Standalone components, routes, and application providers |
+| `src/main.ts`        | Browser bootstrap                                        |
+| `src/main.server.ts` | Server bootstrap                                         |
+| `src/server.ts`      | Express host for assets and Angular SSR                  |
+| `src/styles.css`     | Global styles and Tailwind entry point                   |
+| `public/`            | Static assets                                            |
+| `angular.json`       | Build, development server, and test targets              |
+
+Keep components focused on presentation, put API calls in typed services, and
+guard browser-only APIs so SSR works. Application HTTP endpoints belong in Axum.
+
+## Production build and SSR
+
+From `frontend`:
+
+```sh
+npm run build
+npm run serve:ssr:frontend
+```
+
+The build writes browser and server artifacts under `dist/frontend/`. The SSR
+host serves assets and renders the application on port 4000 by default; `PORT`
+overrides that value. Configure backend `CORS_ORIGIN` for the browser origin when
+making API requests from the SSR frontend.
+
+## Formatting and tests
+
+```sh
 npm run format:check
 npm run build
 npm test -- --watch=false
 ```
 
-## Running end-to-end tests
+Use `npm run format` to apply Prettier fixes. `.prettierignore` excludes generated
+output, installed dependencies, and the npm lockfile. Unit tests use the configured
+Angular/Vitest runner. A browser end-to-end test target has not been configured.
 
-For end-to-end (e2e) testing, run:
+For scaffolding, use the installed CLI through npm:
 
-```bash
-ng e2e
+```sh
+npm run ng -- generate component component-name
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+See [testing](../docs/testing.md) for CI checks and [contributing](../CONTRIBUTING.md)
+for review expectations.

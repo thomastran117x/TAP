@@ -7,12 +7,16 @@ directory you are changing.
 
 Useful references:
 
+- [Repository overview and quick start](README.md)
+- [Documentation index](docs/README.md)
+- [Contributing](CONTRIBUTING.md)
 - [Backend setup and configuration](backend/README.md)
 - [Backend defaults](backend/config/)
 - [Frontend scripts](frontend/package.json)
 - [Frontend build configuration](frontend/angular.json)
 - [Base Compose stack](compose.yml)
 - [Development Compose override](compose.dev.yml)
+- [Integration test stack](compose.test.yml)
 
 Inspect the current code and working tree before choosing an approach. Complete
 the requested change within its scope, preserve unrelated work, and verify the
