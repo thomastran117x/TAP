@@ -62,6 +62,88 @@ compose.dev.yml           Development override; backend uses the dev profile
 - Make database schema changes through versioned migrations and document their
   application steps. Do not assume a migration runner already exists.
 
+## Rust coding practices
+
+Apply these practices to backend changes, together with the architecture
+boundaries above. Favor straightforward, idiomatic Rust that fits the existing
+code over introducing a new framework or abstraction.
+
+### Types, ownership, and APIs
+
+- Keep code and dependencies compatible with the declared Rust 1.92 minimum and
+  edition 2024. Update the manifest, Dockerfile, and CI together when intentionally
+  changing the supported toolchain.
+- Use `snake_case` for functions and modules, `UpperCamelCase` for types and
+  traits, and `SCREAMING_SNAKE_CASE` for constants. Let rustfmt handle formatting.
+- Model meaningful states with structs, enums, and validated newtypes. Use
+  `Option` for absence and `Result` for failure; avoid sentinel values or boolean
+  flags that permit contradictory states.
+- Prefer borrowed inputs such as `&str` and slices when ownership is not needed.
+  Move values when ownership transfers. Clone deliberately; cheap clones of
+  shared client handles are appropriate, but avoid copying payloads merely to
+  work around ownership errors.
+- Prefer the narrowest useful visibility: private, `pub(super)`, or `pub(crate)`
+  before `pub`. Document public APIs, including important invariants and errors.
+  Use `From`/`TryFrom` for meaningful conversions and checked conversions where
+  casts could truncate or overflow.
+- Use traits and generics when there is an actual shared contract. Avoid creating
+  a trait for every service, unnecessary trait objects, or macros for simple code.
+- Prefer safe Rust. If unsafe code is necessary, isolate it, explain each safety
+  invariant in `SAFETY` comments, and test the affected behavior. Do not introduce
+  unsafe code for speculative performance improvements.
+
+### Errors and HTTP contracts
+
+- Propagate recoverable failures with `?`; add actionable context with `anyhow`
+  at infrastructure and application boundaries. Use typed errors when callers
+  need to distinguish domain failures, and map them to HTTP responses centrally
+  within the feature or a shared error module.
+- Validate untrusted inputs at the boundary. Separate transport models from
+  persistence or domain models when their contracts differ. Return appropriate
+  status codes with a consistent error shape.
+- Avoid panics in request handling. `unwrap`/`expect` are acceptable in tests or
+  for an explicitly documented invariant, not for ordinary invalid input or
+  unavailable dependencies.
+- Handle results intentionally. Do not discard errors or replace failures with
+  successful defaults unless that behavior is part of the contract. If failure
+  is intentionally tolerated, make the reason and necessary diagnostics clear.
+
+### Async work and persistence
+
+- Keep blocking filesystem calls, synchronous network calls, and substantial
+  CPU work out of async request paths. Use `spawn_blocking` or an appropriate
+  worker for blocking work, and bound concurrency rather than spawning unlimited
+  tasks.
+- Keep lock scopes short and release guards before awaiting external I/O. Use
+  Tokio synchronization when asynchronous waits are needed. Do not wrap already
+  shareable database pools or clients in redundant locks.
+- Give external operations configurable deadlines. Retry only suitable failures
+  with bounded attempts and backoff; account for whether writes are idempotent.
+  A timeout does not prove a remote write was cancelled.
+- Keep spawned tasks owned by the application lifecycle. Observe task failures,
+  respect shutdown and cancellation, and avoid accidental detached work.
+- Use transactions for database writes that must succeed atomically. Keep SQL
+  queries near the feature that owns them, bind input parameters, and explicitly
+  choose cache expiration/invalidation and search consistency behavior.
+- Bound request sizes, collection sizes, and pagination when adding endpoints
+  that accept or return variable amounts of data. Avoid unbounded query results
+  or allocations driven by user input.
+
+### Tests and quality checks
+
+- Test contracts and meaningful failure cases, including validation, dependency
+  failures, and transaction behavior when relevant. Keep private unit tests near
+  their implementation and public API tests under `backend/tests/`.
+- Keep ordinary tests deterministic and independent of live services. Avoid
+  timing-based sleeps or global environment mutation; use explicit inputs and
+  controlled async coordination. Keep tests that require services opt-in.
+- Run the Rust checks listed below for Rust changes. Fix compiler and Clippy
+  warnings rather than weakening CI. A narrowly scoped lint allowance must
+  explain a concrete reason; do not add broad warning suppressions.
+- Do not upgrade dependencies, add new crates, or introduce performance
+  optimizations incidentally. Measure a real bottleneck before trading clarity
+  for a more complex implementation.
+
 ## Configuration
 
 - Load and validate configuration once through `app::Config`. Pass settings to
@@ -123,6 +205,7 @@ From `backend`, check Rust changes:
 
 ```sh
 cargo fmt --check
+cargo build --locked
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
 ```
