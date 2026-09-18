@@ -45,7 +45,11 @@ backend/
     config.rs               # Configuration checks without process env mutation
     errors.rs               # Error contracts, extractor rejections, and headers
     middleware.rs           # HTTP middleware behavior without external services
-    health.rs               # Live service and route integration test
+    integration.rs          # Opt-in live integration test target
+    integration/
+      api.rs                # Assembled routes, CORS, health, readiness failures
+      infrastructure.rs     # Postgres, Redis, and OpenSearch round trips
+      support.rs            # Test configuration and unique resource names
     support/mod.rs          # Shared request helpers
 ```
 
@@ -64,7 +68,7 @@ shared HTTP layers to `middleware`. Feature implementation modules stay private
 unless another module needs an explicit public API.
 
 Tests under `tests/` exercise the library's public API. Small unit tests for
-private logic live beside that implementation. The live health test is ignored
+private logic live beside that implementation. Live integration tests are ignored
 by default; ordinary tests need no external services.
 
 ## Docker Compose
@@ -155,14 +159,15 @@ and invalid settings fail startup. Environment variables still override that fil
 credentials through your deployment's secret configuration. The example
 development and test database credentials match the local Compose defaults.
 `test.yml` uses a separate `tap_test` database and Redis database 1; create the test
-database before running live tests with `APP_ENV=test`. OpenSearch is shared, and
-the current live test performs connectivity checks without writing search data.
+database before running host tests against your own services. The dedicated test
+stack provisions it automatically. Integration tests use unique Redis keys and
+OpenSearch indexes and remove them after use.
 
 PowerShell examples from `backend`:
 
 ```powershell
 $env:APP_ENV = 'test'
-cargo test --locked --test health -- --ignored
+cargo test --locked --test integration -- --ignored
 
 $env:APP_ENV = 'prod'
 $env:DATABASE_URL = 'postgresql://user:password@postgres:5432/tap'
@@ -186,8 +191,8 @@ cargo test --locked
 cargo test --locked -- --ignored
 ```
 
-The live test checks service connectivity, health/readiness, CORS, and readiness
-failure when the Postgres pool is closed.
+The live suite checks service round trips, health/readiness, CORS, HTTP error
+contracts, and readiness failure when the test's Postgres pool is closed.
 
 To run formatting, Clippy, and unit tests with the Docker toolchain:
 
@@ -196,6 +201,45 @@ docker build --target validation -t tap-backend-validation ./backend
 ```
 
 Run this command from the repository root.
+
+## Integration tests
+
+From the repository root, run the complete isolated suite:
+
+```sh
+docker compose -f compose.test.yml up --build --abort-on-container-exit --exit-code-from integration integration
+docker compose -f compose.test.yml down --volumes --remove-orphans
+```
+
+Run the cleanup command after success or failure. This standalone Compose file
+uses the `tap-tests` project, provisions `tap_test`, and waits for Postgres,
+Redis, and OpenSearch to become healthy before starting the Rust test runner.
+It has no published ports or persistent named volumes and runs independently of
+the development stack. The runner's exit code reflects the test result.
+Use a different `-p` project name on both commands for concurrent suite runs.
+
+The suite exercises the assembled Axum router in process with real dependency
+clients. Postgres tests use a temporary table and roll back their transaction;
+Redis tests set expiring keys; OpenSearch tests create, index, search, and delete
+a unique index. Resource names are unique across parallel tests. Cleanup is
+attempted on failed Redis/OpenSearch assertions too. No tests flush Redis or
+delete shared indexes or database tables.
+
+For a native toolchain with your own test services, from `backend`:
+
+```sh
+cargo test --locked --test integration -- --ignored
+```
+
+Test helpers always load `config/test.yml` and accept the usual environment
+overrides without mutating process environment. They require database name
+`tap_test` and Redis database 1 to avoid accidental development/production use.
+Supply `DATABASE_URL`, `REDIS_URL`, and `OPENSEARCH_NODE` for the actual endpoints;
+the isolated stack itself does not expose host ports. Ordinary `cargo test`
+compiles the suite and skips live tests; Clippy checks it with `--all-targets`.
+
+CI runs the same Compose command in a separate backend integration job, prints
+service logs on failure, and always removes the test containers and volumes.
 
 ## HTTP errors
 

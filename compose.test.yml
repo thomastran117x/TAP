@@ -1,0 +1,54 @@
+name: tap-tests
+
+services:
+  integration:
+    build:
+      context: ./backend
+      target: integration
+    environment:
+      APP_ENV: test
+      DATABASE_URL: postgresql://tap:tap@postgres:5432/tap_test
+      REDIS_URL: redis://redis:6379/1
+      OPENSEARCH_NODE: http://opensearch:9200
+      DEPENDENCY_TIMEOUT_MS: 10000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: tap_test
+      POSTGRES_USER: tap
+      POSTGRES_PASSWORD: tap
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "tap", "-d", "tap_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  opensearch:
+    image: opensearchproject/opensearch:2.19.1
+    environment:
+      discovery.type: single-node
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 40

@@ -34,6 +34,7 @@ frontend/
   Dockerfile              Node 24 development/build and SSR runtime
 compose.yml               Base stack; backend uses the prod profile
 compose.dev.yml           Development override; backend uses the dev profile
+compose.test.yml          Standalone isolated integration stack and test runner
 .env.example              Optional Compose credentials and published port settings
 .github/workflows/ci.yml   Frontend and backend formatting, build, quality, tests
 ```
@@ -226,15 +227,23 @@ docker build --target validation -t tap-backend-validation ./backend
 Native TLS dependencies require C/C++ build tools, including Clang on Windows
 ARM64. Use the Docker validation stage when these are unavailable.
 
-Live service checks are opt-in, from `backend` with matching configuration:
+Run live integration tests from the repository root:
 
 ```sh
-cargo test --locked --test health -- --ignored
+docker compose -f compose.test.yml up --build --abort-on-container-exit --exit-code-from integration integration
+docker compose -f compose.test.yml down --volumes --remove-orphans
 ```
 
-`APP_ENV=test` uses the `tap_test` database and Redis database 1. Create the test
-database before running live tests with that profile. OpenSearch is shared; use
-isolated indexes if future tests write search data. `/health` reports liveness;
+This uses the separate `tap-tests` project with no published ports or persistent
+named volumes. Cleanup removes only that test stack; run it after success or
+failure. For concurrent runs, use a unique `-p` name on both commands.
+Live tests live in `backend/tests/integration/`, registered by `integration.rs`.
+From `backend`, with your own test services configured, use
+`cargo test --locked --test integration -- --ignored`.
+Helpers force test defaults and require `tap_test` and Redis database 1.
+Use transactions/temporary tables, expiring unique keys, and unique search indexes;
+clean up test resources on failure. Never flush databases or delete shared indexes.
+The Compose stack creates the test database automatically. `/health` reports liveness;
 `/ready` checks all three services and returns 503 when any is unavailable.
 
 From `frontend`, use the package manager declared in `package.json`:
@@ -253,15 +262,17 @@ consistent across platforms. CI uses Node 24 and the npm version declared in
 
 `.github/workflows/ci.yml` runs on pushes, pull requests, and manual dispatch.
 Frontend and backend checks run independently. Backend quality checks include
-Clippy with warnings treated as errors; CI tests do not start external services
-or run the ignored live health test. The backend job also validates both Compose
-configurations. Keep the CI Rust version aligned with the backend Dockerfile.
+Clippy with warnings treated as errors; ordinary backend tests skip live checks.
+A separate integration job runs `compose.test.yml` with real services and always
+cleans up its stack. The backend job validates all three Compose configurations.
+Keep the CI Rust version aligned with the backend Dockerfile.
 
 For Compose edits, from the repository root:
 
 ```sh
 docker compose config --quiet
 docker compose -f compose.yml -f compose.dev.yml config --quiet
+docker compose -f compose.test.yml config --quiet
 ```
 
 ## Change discipline

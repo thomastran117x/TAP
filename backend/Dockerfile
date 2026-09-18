@@ -16,6 +16,9 @@ RUN cargo fmt --check
 RUN cargo clippy --release --locked --all-targets -- -D warnings
 RUN cargo test --release --locked
 
+FROM validation AS integration
+CMD ["cargo", "test", "--release", "--locked", "--test", "integration", "--", "--ignored"]
+
 FROM debian:bookworm-slim AS production
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/* \

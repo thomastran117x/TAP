@@ -75,3 +75,23 @@ jobs:
         run: |
           docker compose config --quiet
           docker compose -f compose.yml -f compose.dev.yml config --quiet
+          docker compose -f compose.test.yml config --quiet
+
+  integration:
+    name: Backend integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Configure OpenSearch kernel requirement
+        run: sudo sysctl -w vm.max_map_count=262144
+      - name: Run integration tests with isolated services
+        run: docker compose -f compose.test.yml up --build --abort-on-container-exit --exit-code-from integration integration
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose -f compose.test.yml logs --no-color
+      - name: Clean up test services
+        if: always()
+        run: docker compose -f compose.test.yml down --volumes --remove-orphans
